@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ellenbarrie Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#04080f;--panel:#0a1220;--border:#17233b;--accent:#f0a500;
+  --text:#e8edf6;--muted:#8a94a6;--faint:#5a6577;
+  --red:#ff5964;--green:#37d39b;--blue:#5aa9ff;--purple:#b48cff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;overflow-x:hidden}
+h1,h2,h3{font-family:'Syne',sans-serif;line-height:1.2}
+.mono{font-family:'JetBrains Mono',monospace}
+
+/* NAV — first element, sticky */
+nav{position:sticky;top:0;z-index:100;background:rgba(4,8,15,.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;padding:0 12px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:500;letter-spacing:.02em;padding:14px 12px 12px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+@media(min-width:900px){.tabs{justify-content:center;padding:0 24px}.tab{padding:16px 16px 14px}}
+
+header{max-width:1100px;margin:0 auto;padding:28px 16px 8px}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+header h1{font-size:clamp(24px,5vw,38px);font-weight:800}
+header .sub{color:var(--muted);margin-top:10px;max-width:760px}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.badge{font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:5px 10px;border-radius:999px;border:1px solid}
+.b-amber{color:var(--accent);border-color:rgba(240,165,0,.4);background:rgba(240,165,0,.08)}
+.b-red{color:var(--red);border-color:rgba(255,89,100,.4);background:rgba(255,89,100,.08)}
+.b-green{color:var(--green);border-color:rgba(55,211,155,.4);background:rgba(55,211,155,.08)}
+.b-blue{color:var(--blue);border-color:rgba(90,169,255,.4);background:rgba(90,169,255,.08)}
+
+.kpis{max-width:1100px;margin:16px auto 0;padding:0 16px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:760px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px}
+.kpi .lbl{font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
+.kpi .val{font-family:'JetBrains Mono',monospace;font-size:clamp(20px,4.5vw,26px);font-weight:600;margin-top:4px}
+.kpi .note{font-size:12px;color:var(--faint);margin-top:2px}
+
+main{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
+.panel{display:none}
+.panel.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.sec-title{font-size:clamp(20px,4vw,26px);font-weight:700}
+.sec-desc{color:var(--muted);margin:6px 0 18px}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.card p+p{margin-top:8px}
+.grid2{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:800px){.grid2{grid-template-columns:1fr 1fr}}
+.grid2 .card{margin-bottom:0}
+.grid2+.card,.grid2+.callout{margin-top:14px}
+
+.callout{border-left:3px solid var(--accent);background:rgba(240,165,0,.06);border-radius:0 12px 12px 0;padding:14px 16px;margin-bottom:14px}
+.callout.red{border-left-color:var(--red);background:rgba(255,89,100,.06)}
+.callout.green{border-left-color:var(--green);background:rgba(55,211,155,.06)}
+.callout.blue{border-left-color:var(--blue);background:rgba(90,169,255,.06)}
+.callout .k{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.callout.red .k{color:var(--red)}.callout.green .k{color:var(--green)}.callout.blue .k{color:var(--blue)}
+
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:4px -4px 0;padding:0 4px}
+table{width:100%;min-width:560px;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+th{text-align:right;color:var(--muted);font-weight:500;padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{text-align:right;padding:9px 10px;border-bottom:1px solid rgba(23,35,59,.6);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+tr.hl td{color:var(--accent)}
+.neg{color:var(--red)}.pos{color:var(--green)}
+.src{font-size:11.5px;color:var(--faint);margin-top:10px;font-family:'JetBrains Mono',monospace}
+
+.chart-box{position:relative;height:280px;margin-top:6px}
+@media(min-width:800px){.chart-box{height:320px}}
+
+.list{list-style:none}
+.list li{padding:12px 0;border-bottom:1px solid rgba(23,35,59,.6)}
+.list li:last-child{border-bottom:none}
+.list b{color:var(--text)}
+.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:2px 8px;border-radius:6px;margin-right:6px;vertical-align:2px;border:1px solid}
+.t-amber{color:var(--accent);border-color:rgba(240,165,0,.4)}
+.t-red{color:var(--red);border-color:rgba(255,89,100,.4)}
+.t-green{color:var(--green);border-color:rgba(55,211,155,.4)}
+.t-blue{color:var(--blue);border-color:rgba(90,169,255,.4)}
+.t-purple{color:var(--purple);border-color:rgba(180,140,255,.4)}
+.muted{color:var(--muted)}
+
+.plant{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:start}
+.plant .cap{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;color:var(--accent);line-height:1.1}
+.plant .cap small{display:block;font-size:10.5px;color:var(--faint);font-weight:400}
+.quote{font-size:16px;font-style:italic;color:var(--text)}
+.quote-by{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:8px}
+
+.chan{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.chan div{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
+.chan .n{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600}
+.chan .l{font-size:11.5px;color:var(--muted)}
+
+footer{text-align:center;color:var(--faint);font-size:11.5px;font-family:'JetBrains Mono',monospace;padding:0 16px 40px}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="overview">Overview</button>
+    <button class="tab" data-t="business">Business</button>
+    <button class="tab" data-t="financials">Financials</button>
+    <button class="tab" data-t="cash">Cash &amp; Debt</button>
+    <button class="tab" data-t="growth">Growth Plants</button>
+    <button class="tab" data-t="governance">Governance</button>
+    <button class="tab" data-t="risks">Risks</button>
+    <button class="tab" data-t="valuation">Valuation</button>
+  </div>
+</nav>
+
+<header>
+  <div class="eyebrow">Ellenbarrie Industrial Gases · Research dashboard</div>
+  <h1>Growth depends on turning new capacity into cash</h1>
+  <p class="sub">A steady industrial-gas supplier with a small side business building gas plants. Sales and profit margins have climbed sharply since FY23, but the company keeps spending more on new plants than its business brings in as cash.</p>
+  <div class="badges">
+    <span class="badge b-amber">Key test: plant ramp-ups in FY27</span>
+    <span class="badge b-red">Free cash flow negative 4 of 5 years</span>
+    <span class="badge b-blue">Clean audit opinion · some control flags</span>
+  </div>
+</header>
+
+<section class="kpis">
+  <div class="kpi"><div class="lbl">Revenue FY26</div><div class="val">₹342 cr</div><div class="note">+9.3% vs FY25</div></div>
+  <div class="kpi"><div class="lbl">Net profit FY26</div><div class="val">₹104 cr</div><div class="note">30.6% of sales</div></div>
+  <div class="kpi"><div class="lbl">Free cash FY26</div><div class="val neg">–₹25 cr</div><div class="note">after ₹159 cr capex</div></div>
+  <div class="kpi"><div class="lbl">Price / Earnings</div><div class="val">43.0x</div><div class="note">Industry 42.0x</div></div>
+</section>
+
+<main>
+
+<!-- OVERVIEW -->
+<section class="panel active" id="overview">
+  <h2 class="sec-title">The story in one screen</h2>
+  <p class="sec-desc">What the business is, what has gone right, and the one question that matters next.</p>
+
+  <div class="callout">
+    <div class="k">The central question</div>
+    Can the new plants (both those built at customer sites and those selling to the open market), plus fuller use of existing plants and specialty gases, produce cash that keeps coming in year after year (durable operating cash flow)? That has to be weighed against execution, contracting and reporting watchpoints, and a share price that is already priced around or above the industry on some measures.
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="tag t-green">WORKING</span>What has gone right</h3>
+      <ul class="list">
+        <li>Sales recovered from ₹205 cr in FY23 to ₹342 cr in FY26.</li>
+        <li>The share of sales left as operating profit (operating margin) jumped from 16.4% in FY23 to 34.0% in FY26.</li>
+        <li>Cash from day-to-day operations recovered to ₹133 cr in FY26, from just ₹4 cr in FY25.</li>
+        <li>Borrowings and net debt both came down in FY26.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="tag t-red">WATCH</span>What needs proof</h3>
+      <ul class="list">
+        <li>Cash left after building plants (free cash flow) was negative in FY23, FY24, FY25 and FY26.</li>
+        <li>Sales growth slowed to 9.3% in FY26 from 16.0% in FY25.</li>
+        <li>Returns on money invested fell: ROCE 12.5% (from 16.9%), ROE 10.7% (from 16.9%).</li>
+        <li>Bank filings did not match the books in FY25 and FY26.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout blue">
+    <div class="k">Bottom line from the report</div>
+    The next leg of growth depends on commissioning and ramping new plants without tying up too much capital. The next annual audit and the pace of plant start-ups will be the key evidence.
+  </div>
+</section>
+
+<!-- BUSINESS -->
+<section class="panel" id="business">
+  <h2 class="sec-title">Gas supply is the core; engineering is small</h2>
+  <p class="sec-desc">How Ellenbarrie earns money and the three ways it delivers gas to customers.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>FY26 revenue by segment</h3>
+      <div class="chart-box" style="height:240px"><canvas id="segChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>What it sells</h3>
+      <p>Industrial and medical gases: oxygen, nitrogen, argon, carbon dioxide, helium, hydrogen, acetylene and specialty gases, plus medical gases and related equipment.</p>
+      <p class="muted">Customers range from large plants to hospitals and smaller industrial users, across steel, engineering, pharma, chemicals and healthcare.</p>
+      <div class="chan" style="grid-template-columns:1fr 1fr">
+        <div><div class="n">1,829</div><div class="l">customers (Mar 2025)</div></div>
+        <div><div class="n">85%+</div><div class="l">revenue from repeat business</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Segment detail</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Segment</th><th>FY26 revenue</th><th>FY26 PBIT</th><th>Share</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>Gases, products &amp; services</td><td>₹334.04 cr</td><td class="pos">₹128.39 cr</td><td>~97.8%</td><td>Core recurring supply</td></tr>
+        <tr><td>Project Engineering</td><td>₹7.54 cr</td><td class="neg">–₹1.51 cr</td><td>~2.2%</td><td>Turnkey gas plants, medical-gas systems</td></tr>
+        <tr class="hl"><td>Total</td><td>₹341.58 cr</td><td>₹126.88 cr</td><td>100%</td><td></td></tr>
+      </tbody>
+    </table></div>
+    <p class="src">PBIT = profit before interest and tax. Source: segment reporting FY25–FY26; shares calculated from FY26 segment revenue.</p>
+  </div>
+
+  <div class="card">
+    <h3>Three ways gas reaches customers</h3>
+    <div class="chan">
+      <div><div class="n">3</div><div class="l">on-site customers</div></div>
+      <div><div class="n">328</div><div class="l">bulk customers</div></div>
+      <div><div class="n">1,498</div><div class="l">packaged customers</div></div>
+    </div>
+    <ul class="list" style="margin-top:8px">
+      <li><span class="tag t-green">ON-SITE</span><b>Plant built at the customer's premises</b>, gas piped directly. Contracts typically 15–20 years, often with take-or-pay terms (customer pays even if it uses less), guaranteed returns and costs passed through.</li>
+      <li><span class="tag t-blue">BULK</span><b>Liquid gas delivered by tanker</b> into the customer's storage tanks. Merchant contracts typically 3–7 years.</li>
+      <li><span class="tag t-purple">PACKAGED</span><b>Gas cylinders</b> for many smaller, spread-out customers. Contracts typically 1–3 years.</li>
+      <li><span class="tag t-amber">ENGINEERING</span><b>Designs, supplies and commissions gas plants</b> and hospital medical-gas pipelines. Management calls this revenue periodic; gases are the core driver.</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    <div class="k">Why the mix matters</div>
+    On-site contracts give long, predictable income; bulk and cylinder supply reach a much wider customer base. The two complement each other.
+  </div>
+</section>
+
+<!-- FINANCIALS -->
+<section class="panel" id="financials">
+  <h2 class="sec-title">A FY23 dip, then a big margin jump</h2>
+  <p class="sec-desc">Sales, profit and how much of each ₹100 of sales the company keeps.</p>
+
+  <div class="card">
+    <h3>Revenue, EBITDA &amp; PAT (₹ cr) with operating margin</h3>
+    <div class="chart-box"><canvas id="finChart"></canvas></div>
+    <p class="src">EBITDA = operating profit before depreciation. PAT = profit after tax. OPM = operating profit margin.</p>
+  </div>
+
+  <div class="card">
+    <h3>Year-by-year numbers</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Period</th><th>Revenue</th><th>Growth</th><th>EBITDA</th><th>OPM</th><th>PAT</th><th>NPM</th></tr></thead>
+      <tbody>
+        <tr><td>FY22</td><td>247</td><td class="pos">40.9%</td><td>74</td><td>25.2%</td><td>44</td><td>17.9%</td></tr>
+        <tr><td>FY23</td><td>205</td><td class="neg">–16.9%</td><td>45</td><td>16.4%</td><td>28</td><td>13.7%</td></tr>
+        <tr><td>FY24</td><td>269</td><td class="pos">31.4%</td><td>72</td><td>22.8%</td><td>45</td><td>16.8%</td></tr>
+        <tr><td>FY25</td><td>312</td><td class="pos">16.0%</td><td>130</td><td>35.1%</td><td>83</td><td>26.6%</td></tr>
+        <tr><td>FY26</td><td>342</td><td class="pos">9.3%</td><td>138</td><td>34.0%</td><td>104</td><td>30.6%</td></tr>
+        <tr class="hl"><td>TTM</td><td>357</td><td>8.5%</td><td>146</td><td>34.5%</td><td>121</td><td>33.8%</td></tr>
+      </tbody>
+    </table></div>
+    <p class="src">₹ crore. TTM = trailing twelve months. NPM = net profit margin. Source: reported financials FY22–FY26 and TTM.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="callout red" style="margin:0">
+      <div class="k">Growth has slowed</div>
+      Sales grew 9.3% in FY26, down from 16.0% in FY25, even though profit rose to ₹104 cr.
+    </div>
+    <div class="callout green" style="margin:0">
+      <div class="k">Margins stay high</div>
+      Operating margin went from 16.4% (FY23) to 34.0% (FY26); 34.5% on a trailing basis.
+    </div>
+  </div>
+  <div class="card">
+    <h3>Returns on money invested are mixed</h3>
+    <p>Profit earned on all capital used in the business (ROCE) was <b class="mono">12.5%</b> in FY26, down from <b class="mono">16.9%</b>. Profit earned on shareholders' money (ROE) was <b class="mono">10.7%</b>, down from <b class="mono">16.9%</b>.</p>
+  </div>
+  <div class="callout blue">
+    <div class="k">Data limitation</div>
+    The quarterly table retrieved for this report had no quarterly figures, so the analysis uses annual and TTM data. This does not mean the company has not reported quarterly results.
+  </div>
+</section>
+
+<!-- CASH -->
+<section class="panel" id="cash">
+  <h2 class="sec-title">Cash improved, but building plants still eats it</h2>
+  <p class="sec-desc">Profit on paper versus cash actually collected, and what is left after building new capacity.</p>
+
+  <div class="card">
+    <h3>Operating cash flow vs capex vs free cash flow (₹ cr)</h3>
+    <div class="chart-box"><canvas id="cashChart"></canvas></div>
+    <p class="src">OCF = cash from day-to-day operations. Capex = money spent on plants and equipment. FCF = OCF minus capex.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="callout green" style="margin:0">
+      <div class="k">FY26 cash conversion recovered</div>
+      Operating cash of ₹133 cr was 1.27x profit, versus just ₹4 cr (0.05x profit) in FY25.
+    </div>
+    <div class="callout red" style="margin:0">
+      <div class="k">Free cash still negative</div>
+      FY26 free cash flow was –₹25 cr after ₹159 cr of capex. FY23–FY25 were also negative.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Cash &amp; debt table</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Period</th><th>Borrowings</th><th>Cash</th><th>Net debt</th><th>OCF</th><th>Capex</th><th>FCF</th><th>OCF/PAT</th></tr></thead>
+      <tbody>
+        <tr><td>FY22</td><td>11</td><td>94</td><td class="pos">–83</td><td>13</td><td>17</td><td>0</td><td>29.4%</td></tr>
+        <tr><td>FY23</td><td>101</td><td>15</td><td>86</td><td>39</td><td>95</td><td class="neg">–56</td><td>137.7%</td></tr>
+        <tr><td>FY24</td><td>178</td><td>4</td><td>175</td><td>44</td><td>88</td><td class="neg">–42</td><td>96.6%</td></tr>
+        <tr><td>FY25</td><td>247</td><td>3</td><td>244</td><td>4</td><td>70</td><td class="neg">–65</td><td>5.1%</td></tr>
+        <tr class="hl"><td>FY26</td><td>184</td><td>72</td><td>112</td><td>133</td><td>159</td><td>–25</td><td>127.0%</td></tr>
+      </tbody>
+    </table></div>
+    <p class="src">₹ crore. Net debt = borrowings minus cash (negative means more cash than debt). Source: reported financials FY22–FY26.</p>
+  </div>
+
+  <div class="card">
+    <h3>Net debt over time (₹ cr)</h3>
+    <div class="chart-box" style="height:240px"><canvas id="debtChart"></canvas></div>
+  </div>
+
+  <div class="callout">
+    <div class="k">Unexplained gap</div>
+    Total FY26 investing cash outflow was –₹436 cr, far more than the ₹159 cr of reported capex. The available figures do not break down that difference.
+  </div>
+</section>
+
+<!-- GROWTH -->
+<section class="panel" id="growth">
+  <h2 class="sec-title">Plant ramp-ups are the near-term test</h2>
+  <p class="sec-desc">The new plants that are meant to drive FY27 and beyond. No plant-by-plant revenue guidance has been given.</p>
+
+  <div class="card">
+    <p class="quote">"The new on-site plant in East India is being commissioned. This plant has a capacity of 320 tons per day and is expected to contribute revenue from Q2 of FY27."</p>
+    <p class="quote-by">— Management, Q1 FY27 earnings call, 10 Aug 2026</p>
+  </div>
+  <div class="callout red">
+    <div class="k">Read carefully</div>
+    This is an expected start of revenue, not evidence the plant is already producing or earning.
+  </div>
+
+  <div class="card">
+    <h3>Plant pipeline</h3>
+    <ul class="list">
+      <li class="plant"><div class="cap">320<small>TPD</small></div><div><span class="tag t-green">ON-SITE</span><b>Durgapur (East India) — for Jay Balaji.</b> Under commissioning; revenue expected from Q2 FY27 under a long-term customer arrangement.</div></li>
+      <li class="plant"><div class="cap">220<small>TPD</small></div><div><span class="tag t-blue">MERCHANT</span><b>Uluberia 2.</b> Commissioned Q4 FY26; ramp-up expected through FY27. Management says a new merchant plant typically takes about 18 months to reach optimum use.</div></li>
+      <li class="plant"><div class="cap">75–80%<small>UTIL.</small></div><div><span class="tag t-blue">MERCHANT</span><b>Kurnool.</b> Utilisation (how much of capacity is used) rose from above 65% in Q1 FY26 to roughly 75–80% by Q2 FY26. Named with Uluberia 2 as an FY27 driver.</div></li>
+      <li class="plant"><div class="cap">220<small>TPD</small></div><div><span class="tag t-amber">PLANNED</span><b>North India merchant plant.</b> Work in progress per FY26 report; earlier plans targeted H2 FY27. No advance contracts for the capacity.</div></li>
+      <li class="plant"><div class="cap">FY28<small>TARGET</small></div><div><span class="tag t-purple">LATER</span><b>West/Central India plant</b> with high-purity and specialty-gas capability.</div></li>
+    </ul>
+    <p class="src">TPD = tonnes per day. Merchant plant = sells to many customers in the open market rather than one site.</p>
+  </div>
+
+  <div class="card">
+    <h3>Other possible catalysts <span class="muted" style="font-weight:400;font-size:13px">(opportunities, not yet earnings)</span></h3>
+    <ul class="list">
+      <li>Better argon prices and product mix.</li>
+      <li>Specialty gases for solar, electronics and semiconductor customers — needs customer approvals and supply-chain development.</li>
+      <li>A planned move into manufacturing gas plants for third parties.</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    <div class="k">What drives margins</div>
+    The company itself names power cost, plant utilisation and argon pricing as the key margin drivers.
+  </div>
+</section>
+
+<!-- GOVERNANCE -->
+<section class="panel" id="governance">
+  <h2 class="sec-title">Capital use and reporting need close attention</h2>
+  <p class="sec-desc">Where the IPO money went, and the audit flags worth tracking.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>IPO fresh proceeds: ₹400 cr</h3>
+      <div class="chart-box" style="height:220px"><canvas id="ipoChart"></canvas></div>
+      <p class="src">The remainder covers general corporate purposes and issue expenses; split NOT DISCLOSED in this report. Monitoring report: no cost revisions against stated uses.</p>
+    </div>
+    <div class="card">
+      <h3>Expansion funding</h3>
+      <p>The company has guided to <b class="mono">₹450 cr</b> of capex for two merchant plants; construction has started on both.</p>
+      <p class="muted">The ₹210 cr for debt repayment and ₹104.5 cr for the Uluberia-II plant are separate stated uses, so the full expansion programme has to be judged against cash generation and funding.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Audit &amp; control scorecard</h3>
+    <ul class="list">
+      <li><span class="tag t-green">CLEAN</span><b>Audit opinion:</b> unqualified (no reservations) for FY25 and FY26. No defaults or covenant breaches reported.</li>
+      <li><span class="tag t-red">FLAG</span><b>Bank-return mismatch:</b> quarterly statements filed with banks for working-capital loans above ₹5 cr did not match the books in both FY25 and FY26. A reporting-control issue, though no default was reported.</li>
+      <li><span class="tag t-red">FLAG</span><b>Audit-trail gaps:</b> the system log of edits was switched on only from 21 Jun 2024 (FY25) and 29 Apr 2025 (FY26). Auditor could not verify payroll backups were kept in India from 1 Nov 2025.</li>
+      <li><span class="tag t-amber">CHECK</span><b>Profit quality:</b> FY26 profit includes ₹23.19 cr from revaluing land (dating from before 2016). The effective tax rate and partly-quantified Q4 one-offs also need watching when judging recurring profit.</li>
+      <li><span class="tag t-amber">CHECK</span><b>Pending claim:</b> a disputed supplier claim of about ₹3.5 cr with no provision set aside.</li>
+      <li><span class="tag t-blue">DATES</span><b>Repayments:</b> term-loan instalments start Jan and Jun 2027; foreign-currency loans due by Jan and Mar 2027.</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    <div class="k">Overall</div>
+    No defaults and no qualified audit opinion — but the bank-return mismatch, audit-trail gaps and unresolved supplier claim warrant monitoring. The next annual audit is the key evidence.
+  </div>
+</section>
+
+<!-- RISKS -->
+<section class="panel" id="risks">
+  <h2 class="sec-title">Risks alongside the growth case</h2>
+  <p class="sec-desc">Customer, cost, execution and safety risks named in the report, with the company's stated mitigations.</p>
+
+  <div class="card">
+    <ul class="list">
+      <li><span class="tag t-red">CUSTOMER</span><b>Concentration:</b> the FY26 annual report flags reliance on a limited number of customers and end-user industries. <span class="muted">Mitigation: long-term contracts and diversification.</span></li>
+      <li><span class="tag t-red">EXECUTION</span><b>Merchant ramp-up:</b> new merchant plants take time to reach efficient use and are not pre-sold under advance contracts, so local customer wins and distribution matter more.</li>
+      <li><span class="tag t-amber">COST</span><b>Power and argon:</b> electricity price or supply disruptions hit costs; argon prices swing with supply and demand. <span class="muted">Mitigation: sourcing, inventory and customer-pricing measures where applicable.</span></li>
+      <li><span class="tag t-amber">SAFETY</span><b>Operational safety:</b> oxygen, hydrogen and acetylene handling, high pressure, extreme temperatures, and tanker or cylinder incidents. <span class="muted">Mitigation: training, certified equipment, audits, emergency preparation.</span></li>
+      <li><span class="tag t-blue">PROJECT</span><b>Project and supply continuity:</b> turnkey project delays, logistics limits, storage constraints and supplier disruption can hurt delivery or project profit.</li>
+    </ul>
+  </div>
+
+  <div class="callout red">
+    <div class="k">The risk that ties to the thesis</div>
+    Because new merchant capacity is not pre-contracted, how fast Uluberia 2 and the North India plant fill up directly decides whether capex turns into cash.
+  </div>
+</section>
+
+<!-- VALUATION -->
+<section class="panel" id="valuation">
+  <h2 class="sec-title">Little room for execution slippage</h2>
+  <p class="sec-desc">How much investors are paying today versus the company's own history and its industry.</p>
+
+  <div class="card">
+    <h3>Current vs history vs industry</h3>
+    <div class="chart-box"><canvas id="valChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Measure</th><th>Current</th><th>3-yr median</th><th>5-yr median</th><th>Industry</th></tr></thead>
+      <tbody>
+        <tr><td>P/E (price ÷ earnings)</td><td>43.0x</td><td>49.8x</td><td>49.8x</td><td>42.0x</td></tr>
+        <tr><td>EV/EBITDA (business value ÷ operating profit)</td><td>43.1x</td><td>34.9x</td><td>34.9x</td><td>43.1x</td></tr>
+        <tr><td>P/B (price ÷ book value)</td><td>5.3x</td><td>4.2x</td><td>4.2x</td><td>5.3x</td></tr>
+      </tbody>
+    </table></div>
+    <p class="src">Source: valuation metrics. PEG (P/E ÷ growth): 1.93 · FCF yield (free cash ÷ market value): –0.5%.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="kpi"><div class="lbl">PEG ratio</div><div class="val">1.93</div><div class="note">P/E relative to growth</div></div>
+    <div class="kpi"><div class="lbl">FCF yield</div><div class="val neg">–0.5%</div><div class="note">no free cash for owners yet</div></div>
+  </div>
+
+  <div class="callout" style="margin-top:14px">
+    <div class="k">Reading the multiples</div>
+    P/E is below the company's own history and close to the industry. EV/EBITDA and P/B are above its own medians and level with the industry. With negative free cash flow, the valuation depends partly on plants ramping as expected and turning profit into cash — not just adding capacity.
+  </div>
+</section>
+
+</main>
+
+<footer>Built only from the supplied research report · No figures added · Not investment advice</footer>
+
+<script>
+var C = {accent:"#f0a500",text:"#e8edf6",muted:"#8a94a6",faint:"#5a6577",border:"#17233b",red:"#ff5964",green:"#37d39b",blue:"#5aa9ff",purple:"#b48cff"};
+Chart.defaults.color = C.muted;
+Chart.defaults.font.family = "'JetBrains Mono', monospace";
+Chart.defaults.font.size = 11;
+Chart.defaults.borderColor = "rgba(23,35,59,0.8)";
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+
+var drawn = {};
+var builders = {
+  business: function(){
+    new Chart(document.getElementById("segChart"), {
+      type: "doughnut",
+      data: {labels:["Gases & services","Project engineering"], datasets:[{data:[334.04,7.54], backgroundColor:[C.accent,C.purple], borderColor:"#0a1220", borderWidth:3}]},
+      options: {responsive:true, maintainAspectRatio:false, cutout:"62%", plugins:{legend:{position:"bottom"}, tooltip:{callbacks:{label:function(c){return " " + c.label + ": Rs " + c.raw + " cr";}}}}}
+    });
+  },
+  financials: function(){
+    new Chart(document.getElementById("finChart"), {
+      type: "bar",
+      data: {labels:["FY22","FY23","FY24","FY25","FY26","TTM"], datasets:[
+        {type:"bar", label:"Revenue", data:[247,205,269,312,342,357], backgroundColor:"rgba(240,165,0,0.85)", yAxisID:"y"},
+        {type:"bar", label:"EBITDA", data:[74,45,72,130,138,146], backgroundColor:"rgba(90,169,255,0.85)", yAxisID:"y"},
+        {type:"bar", label:"PAT", data:[44,28,45,83,104,121], backgroundColor:"rgba(55,211,155,0.85)", yAxisID:"y"},
+        {type:"line", label:"OPM %", data:[25.2,16.4,22.8,35.1,34.0,34.5], borderColor:C.purple, backgroundColor:C.purple, tension:0.3, pointRadius:4, yAxisID:"y1"}
+      ]},
+      options: {responsive:true, maintainAspectRatio:false, interaction:{mode:"index", intersect:false},
+        plugins:{legend:{position:"bottom"}},
+        scales:{x:{grid:{display:false}}, y:{beginAtZero:true, title:{display:true,text:"Rs cr"}}, y1:{position:"right", min:0, max:40, grid:{display:false}, ticks:{callback:function(v){return v + "%";}}}}}
+    });
+  },
+  cash: function(){
+    new Chart(document.getElementById("cashChart"), {
+      type: "bar",
+      data: {labels:["FY22","FY23","FY24","FY25","FY26"], datasets:[
+        {label:"OCF", data:[13,39,44,4,133], backgroundColor:"rgba(90,169,255,0.85)"},
+        {label:"Capex", data:[17,95,88,70,159], backgroundColor:"rgba(240,165,0,0.85)"},
+        {label:"FCF", data:[0,-56,-42,-65,-25], backgroundColor:"rgba(255,89,100,0.85)"}
+      ]},
+      options: {responsive:true, maintainAspectRatio:false, interaction:{mode:"index", intersect:false}, plugins:{legend:{position:"bottom"}}, scales:{x:{grid:{display:false}}, y:{title:{display:true,text:"Rs cr"}}}}
+    });
+    new Chart(document.getElementById("debtChart"), {
+      type: "line",
+      data: {labels:["FY22","FY23","FY24","FY25","FY26"], datasets:[
+        {label:"Net debt", data:[-83,86,175,244,112], borderColor:C.red, backgroundColor:"rgba(255,89,100,0.12)", fill:true, tension:0.3, pointRadius:4},
+        {label:"Borrowings", data:[11,101,178,247,184], borderColor:C.faint, borderDash:[5,4], tension:0.3, pointRadius:3}
+      ]},
+      options: {responsive:true, maintainAspectRatio:false, interaction:{mode:"index", intersect:false}, plugins:{legend:{position:"bottom"}}, scales:{x:{grid:{display:false}}, y:{title:{display:true,text:"Rs cr"}}}}
+    });
+  },
+  governance: function(){
+    new Chart(document.getElementById("ipoChart"), {
+      type: "bar",
+      data: {labels:["Debt repayment","Uluberia-II ASU","GCP + issue exp."], datasets:[{label:"Rs cr", data:[210,104.5,85.5], backgroundColor:[C.blue,C.accent,"rgba(138,148,166,0.5)"]}]},
+      options: {indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(c){return c.dataIndex === 2 ? " Rs 85.5 cr balance (split not disclosed)" : " Rs " + c.raw + " cr";}}}}, scales:{x:{max:400, title:{display:true,text:"Rs cr of 400"}}, y:{grid:{display:false}}}}
+    });
+  },
+  valuation: function(){
+    new Chart(document.getElementById("valChart"), {
+      type: "bar",
+      data: {labels:["P/E","EV/EBITDA","P/B (x10)"], datasets:[
+        {label:"Current", data:[43.0,43.1,53], backgroundColor:"rgba(240,165,0,0.9)"},
+        {label:"3/5-yr median", data:[49.8,34.9,42], backgroundColor:"rgba(90,169,255,0.8)"},
+        {label:"Industry", data:[42.0,43.1,53], backgroundColor:"rgba(138,148,166,0.6)"}
+      ]},
+      options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:"bottom"}, tooltip:{callbacks:{label:function(c){var v = c.dataIndex === 2 ? (c.raw/10).toFixed(1) : c.raw.toFixed(1); return " " + c.dataset.label + ": " + v + "x";}}}}, scales:{x:{grid:{display:false}}, y:{beginAtZero:true, title:{display:true,text:"multiple (x)"}}}}
+    });
+  }
+};
+
+function activate(id){
+  var tabs = document.querySelectorAll(".tab");
+  for (var i = 0; i < tabs.length; i++){ tabs[i].classList.toggle("active", tabs[i].getAttribute("data-t") === id); }
+  var panels = document.querySelectorAll(".panel");
+  for (var j = 0; j < panels.length; j++){ panels[j].classList.toggle("active", panels[j].id === id); }
+  var btn = document.querySelector('.tab[data-t="' + id + '"]');
+  if (btn) btn.scrollIntoView({behavior:"smooth", inline:"center", block:"nearest"});
+  window.scrollTo({top:0, behavior:"smooth"});
+  if (!drawn[id] && builders[id] && window.Chart){ drawn[id] = true; requestAnimationFrame(function(){ builders[id](); }); }
+}
+
+document.getElementById("tabs").addEventListener("click", function(e){
+  var b = e.target.closest(".tab");
+  if (b) activate(b.getAttribute("data-t"));
+});
+</script>
+</body>
+</html>
